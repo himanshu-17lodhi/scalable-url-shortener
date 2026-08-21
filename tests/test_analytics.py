@@ -3,7 +3,7 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy import select
 
-from app.database import AsyncSessionLocal, init_db
+from app.database import AsyncSessionLocal
 from app.models.click import Click
 from app.models.url import URL
 from app.redis import redis_client
@@ -11,7 +11,6 @@ from app.redis import redis_client
 
 @pytest.mark.asyncio
 async def test_redirect_creates_click_record(client: AsyncClient):
-    await init_db()
     raw_url = "https://pytest-analytics-single.org"
 
     create_resp = await client.post("/api/v1/urls", json={"url": raw_url})
@@ -45,7 +44,6 @@ async def test_redirect_creates_click_record(client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_multiple_redirects_accumulate_clicks(client: AsyncClient):
-    await init_db()
     raw_url = "https://pytest-analytics-multiple.org"
 
     create_resp = await client.post("/api/v1/urls", json={"url": raw_url})
@@ -78,8 +76,6 @@ async def test_multiple_redirects_accumulate_clicks(client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_analytics_endpoint_unknown_short_code(client: AsyncClient):
-    await init_db()
-
     analytics_resp = await client.get("/api/v1/urls/unknown_code_999/analytics")
     assert analytics_resp.status_code == 404
     data = analytics_resp.json()
@@ -88,7 +84,6 @@ async def test_analytics_endpoint_unknown_short_code(client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_cache_hit_triggers_analytics(client: AsyncClient):
-    await init_db()
     raw_url = "https://pytest-analytics-cachehit.org"
 
     create_resp = await client.post("/api/v1/urls", json={"url": raw_url})

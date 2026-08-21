@@ -5,15 +5,14 @@ from httpx import AsyncClient
 import redis.asyncio as aioredis
 
 from app.config import settings
-from app.database import init_db
 from app.rate_limiter import check_rate_limit
 from app.redis import redis_client
 
 
 @pytest.mark.asyncio
 async def test_requests_within_limit_succeed(client: AsyncClient):
-    await init_db()
     ip = "192.168.1.1"
+
     await redis_client.delete(f"ratelimit:{ip}")
 
     # Capacity is settings.RATE_LIMIT_CAPACITY (10)
@@ -26,7 +25,6 @@ async def test_requests_within_limit_succeed(client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_requests_exceeding_limit_return_429(client: AsyncClient):
-    await init_db()
     ip = "192.168.1.2"
     cache_key = f"ratelimit:{ip}"
     await redis_client.delete(cache_key)
@@ -60,8 +58,8 @@ async def test_requests_exceeding_limit_return_429(client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_tokens_refill_over_time(client: AsyncClient):
-    await init_db()
     ip = "192.168.1.3"
+
     cache_key = f"ratelimit:{ip}"
     await redis_client.delete(cache_key)
 
@@ -88,7 +86,6 @@ async def test_tokens_refill_over_time(client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_separate_clients_have_separate_limits(client: AsyncClient):
-    await init_db()
     client_a = "10.0.0.1"
     client_b = "10.0.0.2"
     await redis_client.delete(f"ratelimit:{client_a}")
@@ -121,7 +118,6 @@ async def test_separate_clients_have_separate_limits(client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_concurrent_requests_rate_limiting(client: AsyncClient):
-    await init_db()
     ip = "192.168.1.4"
     cache_key = f"ratelimit:{ip}"
     await redis_client.delete(cache_key)
@@ -149,8 +145,8 @@ async def test_concurrent_requests_rate_limiting(client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_rate_limit_redis_failure_behavior(client: AsyncClient):
-    await init_db()
     ip = "192.168.1.5"
+
     headers = {"X-Forwarded-For": ip}
 
     # Mock redis_client.eval to raise aioredis.RedisError simulating Redis error during rate limiting

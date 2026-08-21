@@ -45,14 +45,21 @@ end
 
 def get_client_ip(request: Request) -> str:
     """
-    Extract client IP address from X-Forwarded-For header or request client host.
+    Extract client IP address safely.
+    Only parses X-Forwarded-For header if TRUST_PROXY_HEADERS is True and the direct connection
+    comes from a trusted proxy IP in TRUSTED_PROXIES.
+    Otherwise, uses request.client.host directly to prevent header spoofing.
     """
-    x_forwarded_for = request.headers.get("X-Forwarded-For")
-    if x_forwarded_for:
-        return x_forwarded_for.split(",")[0].strip()
-    if request.client and request.client.host:
-        return request.client.host
-    return "127.0.0.1"
+    direct_ip = (
+        request.client.host if request.client and request.client.host else "127.0.0.1"
+    )
+
+    if settings.TRUST_PROXY_HEADERS and direct_ip in settings.TRUSTED_PROXIES:
+        x_forwarded_for = request.headers.get("X-Forwarded-For")
+        if x_forwarded_for:
+            return x_forwarded_for.split(",")[0].strip()
+
+    return direct_ip
 
 
 async def check_rate_limit(

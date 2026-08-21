@@ -2,14 +2,12 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
-from app.database import AsyncSessionLocal, init_db
+from app.database import AsyncSessionLocal
 from app.models.url import URL
 
 
 @pytest.mark.asyncio
 async def test_url_model_create_and_read():
-    await init_db()
-
     async with AsyncSessionLocal() as session:
         test_url = URL(
             original_url="https://example.com/test-stage-2", short_code="stg2test"
@@ -38,8 +36,6 @@ async def test_url_model_create_and_read():
 
 @pytest.mark.asyncio
 async def test_url_short_code_unique_constraint():
-    await init_db()
-
     async with AsyncSessionLocal() as session:
         url1 = URL(original_url="https://example.com/original-1", short_code="uniqcode")
         session.add(url1)

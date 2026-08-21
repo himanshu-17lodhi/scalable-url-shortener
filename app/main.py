@@ -1,16 +1,18 @@
+import logging
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, status
+from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 
 from app.config import settings
-from app.database import check_database_connection, engine, init_db
+from app.database import check_database_connection, engine
 from app.redis import check_redis_connection, redis_client
 from app.routes.url_routes import redirect_router, router as url_router
+
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    await init_db()
     yield
     # Cleanup resources on app shutdown
     await redis_client.close()
@@ -25,6 +27,20 @@ app = FastAPI(
     redoc_url="/redoc",
     lifespan=lifespan,
 )
+
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    logger.error(
+        f"Unhandled exception processing {request.method} {request.url}: {exc}",
+        exc_info=True,
+    )
+    detail = str(exc) if settings.DEBUG else "Internal server error"
+    return JSONResponse(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        content={"detail": detail},
+    )
+
 
 app.include_router(url_router)
 

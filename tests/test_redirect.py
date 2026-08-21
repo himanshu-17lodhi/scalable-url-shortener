@@ -2,13 +2,12 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy import select
 
-from app.database import AsyncSessionLocal, init_db
+from app.database import AsyncSessionLocal
 from app.models.url import URL
 
 
 @pytest.mark.asyncio
 async def test_redirect_success(client: AsyncClient):
-    await init_db()
     original_url = "https://example.com/target-redirect-page"
 
     # Create URL via API
@@ -33,8 +32,6 @@ async def test_redirect_success(client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_redirect_unknown_short_code(client: AsyncClient):
-    await init_db()
-
     response = await client.get("/unknown12345", follow_redirects=False)
     assert response.status_code == 404
     data = response.json()
@@ -43,7 +40,6 @@ async def test_redirect_unknown_short_code(client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_redirect_status_and_location_headers(client: AsyncClient):
-    await init_db()
     original_url = "https://python.org/doc"
 
     create_resp = await client.post("/api/v1/urls", json={"url": original_url})
@@ -66,7 +62,6 @@ async def test_redirect_status_and_location_headers(client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_url_creation_and_redirect_workflow(client: AsyncClient):
-    await init_db()
     original_url = "https://fastapi.tiangolo.com/tutorial"
 
     # Step 1: Create short URL

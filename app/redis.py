@@ -4,6 +4,9 @@ from app.config import settings
 redis_client = aioredis.from_url(
     settings.REDIS_URL,
     decode_responses=True,
+    socket_timeout=2.0,
+    socket_connect_timeout=2.0,
+    retry_on_timeout=True,
 )
 
 

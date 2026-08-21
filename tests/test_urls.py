@@ -3,7 +3,7 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy import select
 
-from app.database import AsyncSessionLocal, init_db
+from app.database import AsyncSessionLocal
 from app.models.url import URL
 from app.services.url_service import create_short_url
 from app.utils.short_code import generate_short_code
@@ -21,7 +21,6 @@ def test_generate_short_code():
 
 @pytest.mark.asyncio
 async def test_create_url_endpoint_success(client: AsyncClient):
-    await init_db()
     target_url = "https://example.com/stage3-test-url"
 
     response = await client.post("/api/v1/urls", json={"url": target_url})
@@ -59,7 +58,6 @@ async def test_create_url_endpoint_invalid_url(client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_create_url_collision_handling():
-    await init_db()
     target_url = "https://example.com/collision-test"
 
     # Pre-insert a URL with a known short code "collision1"

@@ -5,14 +5,13 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
-from app.database import AsyncSessionLocal, init_db
+from app.database import AsyncSessionLocal
 from app.models.url import URL
 from app.redis import redis_client
 
 
 @pytest.mark.asyncio
 async def test_cache_miss_queries_postgres_and_populates_redis(client: AsyncClient):
-    await init_db()
     raw_url = "https://pytest-cache-miss.org"
 
     # Create URL via API
@@ -50,7 +49,6 @@ async def test_cache_miss_queries_postgres_and_populates_redis(client: AsyncClie
 
 @pytest.mark.asyncio
 async def test_cache_hit_bypasses_postgres_lookup(client: AsyncClient):
-    await init_db()
     short_code = "cachehit1"
     original_url = "https://pytest-cache-hit.org/"
     cache_key = f"url:{short_code}"
@@ -75,7 +73,6 @@ async def test_cache_hit_bypasses_postgres_lookup(client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_cache_ttl_configuration(client: AsyncClient):
-    await init_db()
     raw_url = "https://pytest-cache-ttl.org"
 
     create_resp = await client.post("/api/v1/urls", json={"url": raw_url})
@@ -103,7 +100,6 @@ async def test_cache_ttl_configuration(client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_redis_failure_fallback(client: AsyncClient):
-    await init_db()
     raw_url = "https://pytest-redis-failure.org"
 
     create_resp = await client.post("/api/v1/urls", json={"url": raw_url})
