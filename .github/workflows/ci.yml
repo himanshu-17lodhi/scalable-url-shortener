@@ -19,7 +19,8 @@ jobs:
           python-version: "3.11"
 
       - name: Install Ruff
-        run: pip install ruff
+        run: pip install ruff==0.12.10
+
 
       - name: Check Linting
         run: ruff check app tests
