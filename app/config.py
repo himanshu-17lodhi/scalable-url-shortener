@@ -34,6 +34,11 @@ class Settings(BaseSettings):
     RATE_LIMIT_REFILL_RATE: float = 1.0  # Tokens per second
     TRUST_PROXY_HEADERS: bool = True
     TRUSTED_PROXIES: list[str] = ["127.0.0.1", "::1"]
+    CORS_ORIGINS: list[str] = [
+        "http://localhost:3000",
+        "http://localhost:8000",
+        "http://127.0.0.1:8000",
+    ]
 
     model_config = SettingsConfigDict(
         env_file=".env", env_file_encoding="utf-8", extra="ignore"

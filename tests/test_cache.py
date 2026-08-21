@@ -1,4 +1,5 @@
 from unittest.mock import AsyncMock, patch
+
 import pytest
 from httpx import AsyncClient
 from sqlalchemy import select
@@ -49,8 +50,9 @@ async def test_cache_miss_queries_postgres_and_populates_redis(client: AsyncClie
 
 @pytest.mark.asyncio
 async def test_cache_hit_bypasses_postgres_lookup(client: AsyncClient):
-    short_code = "cachehit1"
+    short_code = "cach01"
     original_url = "https://pytest-cache-hit.org/"
+
     cache_key = f"url:{short_code}"
 
     # Pre-populate Redis cache directly
@@ -58,14 +60,14 @@ async def test_cache_hit_bypasses_postgres_lookup(client: AsyncClient):
 
     # Mock record_click background task so DB isn't called by analytics,
     # and patch AsyncSession.execute to verify get_original_url does NOT query DB
-    with patch("app.routes.url_routes.record_click"):
-        with patch.object(
-            AsyncSession, "execute", new_callable=AsyncMock
-        ) as mock_execute:
-            redirect_resp = await client.get(f"/{short_code}", follow_redirects=False)
-            assert redirect_resp.status_code == 307
-            assert redirect_resp.headers["location"] == original_url
-            mock_execute.assert_not_called()
+    with (
+        patch("app.routes.url_routes.record_click"),
+        patch.object(AsyncSession, "execute", new_callable=AsyncMock) as mock_execute,
+    ):
+        redirect_resp = await client.get(f"/{short_code}", follow_redirects=False)
+        assert redirect_resp.status_code == 307
+        assert redirect_resp.headers["location"] == original_url
+        mock_execute.assert_not_called()
 
     # Cleanup Redis
     await redis_client.delete(cache_key)

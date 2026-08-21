@@ -32,8 +32,9 @@ async def test_redirect_success(client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_redirect_unknown_short_code(client: AsyncClient):
-    response = await client.get("/unknown12345", follow_redirects=False)
+    response = await client.get("/unk123", follow_redirects=False)
     assert response.status_code == 404
+
     data = response.json()
     assert data["detail"] == "Short URL not found"
 

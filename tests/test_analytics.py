@@ -1,4 +1,5 @@
 import asyncio
+
 import pytest
 from httpx import AsyncClient
 from sqlalchemy import select
@@ -76,8 +77,9 @@ async def test_multiple_redirects_accumulate_clicks(client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_analytics_endpoint_unknown_short_code(client: AsyncClient):
-    analytics_resp = await client.get("/api/v1/urls/unknown_code_999/analytics")
+    analytics_resp = await client.get("/api/v1/urls/unk999/analytics")
     assert analytics_resp.status_code == 404
+
     data = analytics_resp.json()
     assert data["detail"] == "Short URL not found"
 
