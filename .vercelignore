@@ -1,0 +1,8 @@
+.git
+.venv
+.pytest_cache
+.ruff_cache
+tests
+load_tests
+scripts
+docs

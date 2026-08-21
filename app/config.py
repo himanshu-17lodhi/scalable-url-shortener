@@ -1,3 +1,4 @@
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -43,6 +44,19 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=".env", env_file_encoding="utf-8", extra="ignore"
     )
+
+    @field_validator("DATABASE_URL", mode="before")
+    @classmethod
+    def assemble_db_url(cls, v: str | None) -> str:
+        if isinstance(v, str) and v:
+            if v.startswith("postgres://"):
+                return v.replace("postgres://", "postgresql+asyncpg://", 1)
+            if v.startswith("postgresql://") and not v.startswith(
+                "postgresql+asyncpg://"
+            ):
+                return v.replace("postgresql://", "postgresql+asyncpg://", 1)
+            return v
+        return "postgresql+asyncpg://postgres:postgres@localhost:5432/url_shortener"
 
 
 settings = Settings()
