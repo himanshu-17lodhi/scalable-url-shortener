@@ -1,4 +1,5 @@
-from typing import AsyncGenerator
+from collections.abc import AsyncGenerator
+
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import (
     AsyncSession,

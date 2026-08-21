@@ -1,9 +1,10 @@
 from unittest.mock import MagicMock
-from alembic import command
+
+import pytest
 from alembic.config import Config
 from httpx import ASGITransport, AsyncClient
-import pytest
 
+from alembic import command
 from app.config import settings
 from app.database import engine
 from app.main import app

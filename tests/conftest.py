@@ -3,8 +3,8 @@ import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 
 from app.database import engine
-from app.redis import redis_client
 from app.main import app
+from app.redis import redis_client
 
 
 @pytest.fixture

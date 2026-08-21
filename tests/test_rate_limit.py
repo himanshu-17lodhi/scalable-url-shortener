@@ -1,8 +1,9 @@
 import asyncio
 from unittest.mock import patch
+
 import pytest
-from httpx import AsyncClient
 import redis.asyncio as aioredis
+from httpx import AsyncClient
 
 from app.config import settings
 from app.rate_limiter import check_rate_limit

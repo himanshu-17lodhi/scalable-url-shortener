@@ -1,8 +1,8 @@
-from pydantic import BaseModel, HttpUrl
+from pydantic import BaseModel, Field, HttpUrl
 
 
 class URLCreateRequest(BaseModel):
-    url: HttpUrl
+    url: HttpUrl = Field(..., max_length=2048)
 
 
 class URLCreateResponse(BaseModel):
