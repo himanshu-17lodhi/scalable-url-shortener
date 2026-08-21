@@ -34,15 +34,37 @@ A production-ready asynchronous URL shortener and link analytics service built w
 1. **Automatic Migrations**: When the Docker container starts, `docker-entrypoint.sh` executes `alembic upgrade head` before Uvicorn starts.
 2. **Failure Handling**: If database migration fails, the container exits immediately with a non-zero status code (`set -e`) to prevent Uvicorn from starting on an invalid schema.
 3. **Database Schema Authority**: Database migrations are managed strictly through Alembic; runtime `Base.metadata.create_all()` is removed from FastAPI startup.
-4. **Rollback Procedure**:
-   - To roll back a migration in a running stack:
-     ```bash
-     docker compose exec web alembic downgrade -1
-     ```
-   - To revert to a specific migration revision:
-     ```bash
-     docker compose exec web alembic downgrade <revision_id>
-     ```
+
+## Release & Rollback
+
+### Image Tagging Strategy
+
+- **Commit SHA Tags**: Every Git commit produces an image tag (e.g., `ghcr.io/user/app:<commit_sha>`).
+- **Main Branch Tag**: Pushes to `main` update the `latest` tag (`ghcr.io/user/app:latest`).
+- **Semantic Release Tags**: Pushes with Git release tags (e.g., `v1.0.0`) produce versioned image tags (`ghcr.io/user/app:1.0.0` & `ghcr.io/user/app:v1.0.0`).
+
+### Verifying a Release Locally
+
+Run the automated release verification script against a running stack:
+```bash
+python scripts/verify_release.py
+```
+
+### Application Rollback Procedure
+
+To roll back the application container to a previous known-good image version:
+```bash
+# 1. Update image version in environment or compose override
+IMAGE_TAG=v0.9.0 docker compose up -d web
+
+# 2. Confirm container health and database migration status
+curl http://127.0.0.1:8000/health/liveness
+curl http://127.0.0.1:8000/health
+docker compose exec web alembic current
+```
+
+> **Why Database Migrations Are Not Automatically Downgraded**:
+> Application rollback replaces only the application container (`web`). Database schema downgrades (`alembic downgrade`) are performed intentionally and separately because destructive DDL operations can lead to permanent data loss. Non-breaking additive schema changes allow previous application versions to run safely against the current database schema.
 
 ## Quick Start & Local Production Verification
 
@@ -86,8 +108,3 @@ The project uses GitHub Actions (`.github/workflows/ci.yml`) for automated pipel
 3. **Alembic Migration Check**: Migration execution (`alembic upgrade head`) and head validation (`alembic current`) on a fresh PostgreSQL instance
 4. **Docker Smoke Test**: Building Docker image, launching Compose stack, and verifying live API endpoints
 5. **Publish to GHCR**: Building and publishing tagged container images (`ghcr.io/himanshu-17lodhi/scalable-url-shortener`) on push to `main` and release tags (`v*.*.*`)
-
-To manually build and tag the Docker image locally:
-```bash
-docker build -t ghcr.io/himanshu-17lodhi/scalable-url-shortener:latest .
-```
