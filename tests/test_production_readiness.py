@@ -5,7 +5,8 @@ from alembic.config import Config
 from httpx import ASGITransport, AsyncClient
 
 from alembic import command
-from app.config import settings
+from app.config import Settings, settings
+
 from app.database import engine
 from app.main import app
 from app.rate_limiter import get_client_ip
@@ -61,3 +62,9 @@ async def test_global_exception_handler_sanitizes_errors(monkeypatch):
         response = await unhandled_client.get("/api/v1/test-error-endpoint")
         assert response.status_code == 500
         assert response.json() == {"detail": "Internal server error"}
+
+
+def test_production_default_settings():
+    default_settings = Settings(_env_file=None)
+    assert default_settings.DEBUG is False
+    assert "*" not in default_settings.CORS_ORIGINS
