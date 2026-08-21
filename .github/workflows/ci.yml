@@ -67,6 +67,11 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      - name: Run database migrations
+        env:
+          DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/url_shortener_test
+        run: alembic upgrade head
+
       - name: Run pytest
         env:
           DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/url_shortener_test
@@ -146,7 +151,6 @@ jobs:
         run: |
           curl -f http://127.0.0.1:8000/health
           docker compose exec -T web alembic current | grep -q "001_initial_schema (head)"
-
           CREATE_RESP=$(curl -s -X POST http://127.0.0.1:8000/api/v1/urls \
             -H "Content-Type: application/json" \
             -d '{"url": "https://example.com/ci-smoke-test"}')
