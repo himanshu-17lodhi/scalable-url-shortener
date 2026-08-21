@@ -1,110 +1,136 @@
 # Scalable URL Shortener
 
-A production-ready asynchronous URL shortener and link analytics service built with FastAPI, PostgreSQL, SQLAlchemy 2.x async, Redis, Alembic, and Docker.
+An asynchronous URL shortener and link analytics API built with FastAPI, PostgreSQL, Redis, Alembic, and Docker.
 
 ## Features
 
-- Fast URL shortening with Base62 short-codes
-- Asynchronous cache-aside URL lookup via Redis
-- Token-bucket rate limiting backed by Redis Lua scripts
-- Out-of-band click analytics via FastAPI BackgroundTasks
-- Alembic database schema migrations
-- Docker Compose containerized deployment with health checks
-- Automatic database migrations on container startup
+- **URL Shortening & Redirects**: Generates 6-character Base62 short codes and returns HTTP 307 redirects.
+- **Cache-Aside Lookups**: Uses Redis to cache short code lookups for faster redirects.
+- **Rate Limiting**: Redis token-bucket rate limiting to prevent API abuse.
+- **Click Analytics**: Asynchronous click tracking processed out-of-band using FastAPI `BackgroundTasks`.
+- **API Hardening**: Request ID middleware, strict path regex validation, CORS configuration, and security headers.
+- **Database Migrations**: Schema migrations managed strictly through Alembic.
+- **Containerized Deployment**: Runs via Docker Compose with health checks and automatic startup migrations.
 
-## Environment Variables
+## Tech Stack
 
-| Variable | Default | Description |
-|---|---|---|
-| `ENVIRONMENT` | `production` | Deployment environment name (`development`, `staging`, `production`) |
-| `DEBUG` | `false` | Enable verbose error responses and debug logs |
-| `BASE_URL` | `http://localhost:8000` | Public base URL prefix for generated short links |
-| `DATABASE_URL` | `postgresql+asyncpg://postgres:postgres@postgres:5432/url_shortener` | Async PostgreSQL database connection URI |
-| `DB_POOL_SIZE` | `5` | SQLAlchemy async connection pool size |
-| `DB_MAX_OVERFLOW` | `10` | Maximum overflow connections for DB pool |
-| `REDIS_URL` | `redis://redis:6379/0` | Redis client connection string |
-| `CACHE_TTL_SECONDS` | `3600` | Redis cache-aside key expiration time in seconds |
-| `RATE_LIMIT_ENABLED` | `true` | Enable Redis token-bucket rate limiting |
-| `RATE_LIMIT_CAPACITY` | `10` | Maximum token capacity per client IP |
-| `RATE_LIMIT_REFILL_RATE` | `1.0` | Token refill rate per second per client IP |
-| `CORS_ORIGINS` | `["http://localhost:3000"]` | JSON array of allowed CORS origins |
+- **Python 3.11** / **FastAPI**
+- **PostgreSQL** / **SQLAlchemy 2.x async** (`asyncpg`)
+- **Redis** (caching and rate limiting)
+- **Alembic** (database migrations)
+- **Docker** & **Docker Compose**
+- **GitHub Actions** (CI/CD)
+- **pytest** & **Ruff**
 
-## Migration & Startup Behavior
+## Project Structure
 
-1. **Automatic Migrations**: When the Docker container starts, `docker-entrypoint.sh` executes `alembic upgrade head` before Uvicorn starts.
-2. **Failure Handling**: If database migration fails, the container exits immediately with a non-zero status code (`set -e`) to prevent Uvicorn from starting on an invalid schema.
-3. **Database Schema Authority**: Database migrations are managed strictly through Alembic; runtime `Base.metadata.create_all()` is removed from FastAPI startup.
-
-## Release & Rollback
-
-### Image Tagging Strategy
-
-- **Commit SHA Tags**: Every Git commit produces an image tag (e.g., `ghcr.io/user/app:<commit_sha>`).
-- **Main Branch Tag**: Pushes to `main` update the `latest` tag (`ghcr.io/user/app:latest`).
-- **Semantic Release Tags**: Pushes with Git release tags (e.g., `v1.0.0`) produce versioned image tags (`ghcr.io/user/app:1.0.0` & `ghcr.io/user/app:v1.0.0`).
-
-### Verifying a Release Locally
-
-Run the automated release verification script against a running stack:
-```bash
-python scripts/verify_release.py
+```text
+scalable-url-shortener/
+├── app/                  # FastAPI routes, models, schemas, services, and middleware
+├── alembic/              # Database migration scripts and environment config
+├── tests/                # Async test suite (analytics, cache, rate limiting, health, etc.)
+├── scripts/              # Release verification and helper scripts
+├── load_tests/           # Load benchmarking scripts
+├── .github/workflows/    # GitHub Actions CI/CD pipeline
+├── Dockerfile            # Container image definition
+├── docker-compose.yml    # Main compose file (web, postgres, redis)
+└── docker-entrypoint.sh  # Container entrypoint running migrations before Uvicorn
 ```
 
-### Application Rollback Procedure
+## Running Locally
 
-To roll back the application container to a previous known-good image version:
-```bash
-# 1. Update image version in environment or compose override
-IMAGE_TAG=v0.9.0 docker compose up -d web
+1. **Clone the repository and set up a virtual environment**:
+   ```powershell
+   git clone https://github.com/himanshu-17lodhi/scalable-url-shortener.git
+   cd scalable-url-shortener
+   python -m venv .venv
+   .\.venv\Scripts\Activate.ps1
+   pip install -r requirements.txt
+   ```
 
-# 2. Confirm container health and database migration status
-curl http://127.0.0.1:8000/health/liveness
-curl http://127.0.0.1:8000/health
-docker compose exec web alembic current
+2. **Start PostgreSQL and Redis**:
+   ```powershell
+   docker compose up -d postgres redis
+   ```
+
+3. **Run database migrations and start the server**:
+   ```powershell
+   alembic upgrade head
+   uvicorn app.main:app --reload
+   ```
+
+4. **Access the API**:
+   - Interactive API documentation: `http://127.0.0.1:8000/docs`
+   - Health endpoint: `http://127.0.0.1:8000/health`
+
+## Using the API
+
+### 1. Create a Short URL
+```powershell
+Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:8000/api/v1/urls" -ContentType "application/json" -Body '{"url": "https://example.com/target-page"}'
 ```
 
-> **Why Database Migrations Are Not Automatically Downgraded**:
-> Application rollback replaces only the application container (`web`). Database schema downgrades (`alembic downgrade`) are performed intentionally and separately because destructive DDL operations can lead to permanent data loss. Non-breaking additive schema changes allow previous application versions to run safely against the current database schema.
+Sample Response:
+```json
+{
+  "short_code": "BICkLa",
+  "short_url": "http://localhost:8000/BICkLa",
+  "original_url": "https://example.com/target-page"
+}
+```
 
-## Quick Start & Local Production Verification
+### 2. Access the Short URL (HTTP 307 Redirect)
+```powershell
+python -c "import httpx; r = httpx.get('http://127.0.0.1:8000/BICkLa', follow_redirects=False); print(r.status_code, r.headers['location'])"
+```
 
-1. **Start the application stack locally**:
-   ```bash
-   docker compose up -d --build
-   ```
+### 3. Check Click Analytics
+```powershell
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/api/v1/urls/BICkLa/analytics"
+```
 
-2. **Verify health & startup migrations**:
-   ```bash
-   curl http://127.0.0.1:8000/health/liveness
-   curl http://127.0.0.1:8000/health
-   docker compose exec web alembic current
-   ```
+## Testing
 
-3. **Staging verification with override config**:
-   ```bash
-   docker compose -f docker-compose.yml -f docker-compose.staging.yml up -d --build
-   ```
+Run the test suite:
+```powershell
+python -m pytest
+```
 
-4. **Verify API endpoints**:
-   ```bash
-   # Create URL
-   curl -X POST http://127.0.0.1:8000/api/v1/urls \
-     -H "Content-Type: application/json" \
-     -d '{"url": "https://example.com/target-page"}'
+Run linter and formatting checks:
+```powershell
+pre-commit run --all-files
+```
 
-   # Redirect
-   curl -i http://127.0.0.1:8000/{short_code}
+The test suite contains 43 automated tests covering URL creation, Base62 validation, 307 redirects, Redis cache hits and misses, token-bucket rate limiting, security headers, and release/rollback behavior.
 
-   # Analytics
-   curl http://127.0.0.1:8000/api/v1/urls/{short_code}/analytics
-   ```
+## Docker
 
-## Image Build & CI/CD Pipeline
+Start the full application stack with Docker Compose:
+```powershell
+docker compose up -d --build
+```
 
-The project uses GitHub Actions (`.github/workflows/ci.yml`) for automated pipeline checks:
+The container startup script (`docker-entrypoint.sh`) runs `alembic upgrade head` before Uvicorn starts. If migrations fail, the container exits immediately with a non-zero exit code.
 
-1. **Lint & Formatting**: `ruff check app tests` and `ruff format --check app tests`
-2. **Pytest Suite**: Complete async test execution against PostgreSQL and Redis service containers
-3. **Alembic Migration Check**: Migration execution (`alembic upgrade head`) and head validation (`alembic current`) on a fresh PostgreSQL instance
-4. **Docker Smoke Test**: Building Docker image, launching Compose stack, and verifying live API endpoints
-5. **Publish to GHCR**: Building and publishing tagged container images (`ghcr.io/himanshu-17lodhi/scalable-url-shortener`) on push to `main` and release tags (`v*.*.*`)
+To test with staging override configuration:
+```powershell
+docker compose -f docker-compose.yml -f docker-compose.staging.yml up -d --build
+```
+
+## CI/CD
+
+GitHub Actions (`.github/workflows/ci.yml`) automatically runs:
+- Linting and formatting checks with Ruff
+- Test suite execution against PostgreSQL and Redis service containers
+- Alembic database migration check
+- Docker Compose build and live endpoint smoke test
+- Publishing tagged container images to GitHub Container Registry (GHCR) on `main` and release tags (`v*.*.*`)
+
+## Release and Rollback
+
+- Images are tagged by Git commit SHA, `latest`, and semver release tags (e.g., `v1.0.0`).
+- Local release verification script:
+  ```powershell
+  python scripts/verify_release.py
+  ```
+- Application rollback is done by updating the web image version. Database migrations are managed separately to prevent accidental data loss.
