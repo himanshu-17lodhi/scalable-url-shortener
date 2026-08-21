@@ -41,4 +41,3 @@ async def check_database_connection() -> bool:
             return result.scalar() == 1
     except Exception:
         return False
-

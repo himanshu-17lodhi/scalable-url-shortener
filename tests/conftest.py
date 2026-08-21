@@ -27,14 +27,9 @@ async def cleanup_database_engine():
     await engine.dispose()
 
 
-
-
 @pytest_asyncio.fixture
 async def client():
     async with AsyncClient(
-        transport=ASGITransport(app=app),
-        base_url="http://test"
+        transport=ASGITransport(app=app), base_url="http://test"
     ) as ac:
         yield ac
-
-

@@ -45,7 +45,9 @@ async def health_check():
     redis_ok = await check_redis_connection()
 
     is_healthy = db_ok and redis_ok
-    status_code = status.HTTP_200_OK if is_healthy else status.HTTP_503_SERVICE_UNAVAILABLE
+    status_code = (
+        status.HTTP_200_OK if is_healthy else status.HTTP_503_SERVICE_UNAVAILABLE
+    )
 
     return JSONResponse(
         status_code=status_code,
@@ -59,4 +61,3 @@ async def health_check():
 
 
 app.include_router(redirect_router)
-

@@ -13,7 +13,9 @@ class Settings(BaseSettings):
     POSTGRES_DB: str = "url_shortener"
     POSTGRES_HOST: str = "localhost"
     POSTGRES_PORT: int = 5432
-    DATABASE_URL: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/url_shortener"
+    DATABASE_URL: str = (
+        "postgresql+asyncpg://postgres:postgres@localhost:5432/url_shortener"
+    )
 
     # Redis Configuration
     REDIS_HOST: str = "localhost"
@@ -26,11 +28,8 @@ class Settings(BaseSettings):
     RATE_LIMIT_CAPACITY: int = 10
     RATE_LIMIT_REFILL_RATE: float = 1.0  # Tokens per second
 
-
     model_config = SettingsConfigDict(
-        env_file=".env",
-        env_file_encoding="utf-8",
-        extra="ignore"
+        env_file=".env", env_file_encoding="utf-8", extra="ignore"
     )
 
 
